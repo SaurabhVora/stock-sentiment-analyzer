@@ -19,8 +19,7 @@ DB_PATH = os.path.join(DB_DIR, "sentiment.db")
 def init_db() -> None:
     """Initializes the SQLite database and creates the tables if they do not exist.
 
-    Uses strict schema definitions defined in AGENTS.md. Sets WAL journal mode
-    for improved multi-threaded concurrency.
+    Sets WAL journal mode for improved multi-threaded concurrency.
     """
     try:
         if not os.path.exists(DB_DIR):

@@ -12,7 +12,6 @@ __pycache__/
 *.pyd
 .pytest_cache/
 tests/
-AGENTS.md
 README.md
 *.db
 *.log
