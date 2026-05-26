@@ -3,7 +3,7 @@
 A real-time financial market sentiment analytics engine. This application aggregates live financial news headlines (via **NewsAPI**) and scores their sentiment using **ProsusAI/FinBERT** (a financial-domain NLP model from Hugging Face). It then correlates these sentiment scores with real-time stock price metrics (via **yfinance**) inside an interactive dual-axis **Streamlit** dashboard.
 
 ## 🚀 Live Demo
-🌐 **Streamlit Cloud URL:** *[Live Application Demo Placeholder - Add deployed link here]*
+🌐 **Streamlit Cloud URL:** *https://stock-sentiment-analyzer2.streamlit.app/*
 
 ---
 
