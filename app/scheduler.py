@@ -38,8 +38,11 @@ def run_pipeline_for_ticker(ticker: str, start_date: str, end_date: str) -> None
     # 1. Ingest stock price data from yfinance
     price_data = fetch_stock_prices(ticker, start_date, end_date)
     if price_data.empty:
-        logger.warning("No price data retrieved for %s. Daily aggregation will be skipped.", ticker)
-        return
+        logger.warning(
+            "No price data retrieved for %s (possible rate limit). "
+            "Continuing with daily aggregation using headlines only.",
+            ticker
+        )
 
     # 2. Ingest news headlines from NewsAPI
     headlines = []
@@ -67,11 +70,43 @@ def run_pipeline_for_ticker(ticker: str, start_date: str, end_date: str) -> None
             logger.error("Failed to run sentiment scoring or write headlines for %s: %s", ticker, e)
 
     # 4. Generate daily aggregates based on stored headlines and fetched price points
+    all_dates = set()
+    if not price_data.empty:
+        all_dates.update(price_data["Date"].astype(str).tolist())
+    if headlines:
+        all_dates.update([hl["date"] for hl in headlines])
+
+    # Fallback: if both are empty, generate chronological date range
+    if not all_dates:
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            delta = end_dt - start_dt
+            for i in range(delta.days + 1):
+                all_dates.add((start_dt + timedelta(days=i)).strftime("%Y-%m-%d"))
+        except Exception:
+            pass
+
+    # Map price_data by date for fast lookup
+    price_map = {}
+    if not price_data.empty:
+        for _, row in price_data.iterrows():
+            d = str(row["Date"])
+            price_map[d] = {
+                "Close": float(row["Close"]),
+                "PriceChangePct": float(row["PriceChangePct"])
+            }
+
     summaries = []
-    for _, row in price_data.iterrows():
-        date_str = str(row["Date"])
-        close_price = float(row["Close"])
-        pct_change = float(row["PriceChangePct"])
+    for date_str in sorted(all_dates):
+        # Retrieve price details if available, otherwise default to 0.0
+        price_info = price_map.get(date_str)
+        if price_info:
+            close_price = price_info["Close"]
+            pct_change = price_info["PriceChangePct"]
+        else:
+            close_price = 0.0
+            pct_change = 0.0
 
         # Fetch all headlines for this ticker/date to compute exact weighted average sentiment
         stored_hl = get_headlines(ticker, date_str, date_str)
