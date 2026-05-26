@@ -1,0 +1,18 @@
+# Docker ignore patterns to optimize image build contexts
+.git
+.github
+.venv
+venv
+data/
+.env
+.env.example
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+tests/
+AGENTS.md
+README.md
+*.db
+*.log
