@@ -18,9 +18,13 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
-from pipeline.storage import init_db, is_db_empty, get_headlines, get_daily_summaries
-from app.scheduler import start_scheduler, trigger_backfill, run_pipeline_for_ticker
-from app.dashboard import render_metrics, render_plotly_chart, render_keyword_bar_chart
+from pipeline.storage import init_db, is_db_empty, get_headlines, get_daily_summaries  # noqa: E402
+from app.scheduler import start_scheduler, trigger_backfill, run_pipeline_for_ticker  # noqa: E402
+from app.dashboard import (  # noqa: E402
+    render_metrics,
+    render_plotly_chart,
+    render_keyword_bar_chart,
+)
 
 # Configure logging standard PEP 8 compliance
 logging.basicConfig(
