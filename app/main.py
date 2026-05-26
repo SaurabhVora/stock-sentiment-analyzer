@@ -7,7 +7,7 @@ recent headline grids, and day-over-day spike alerts.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Tuple
+from typing import Tuple, List, Dict, Any
 
 import pandas as pd
 import streamlit as st
@@ -45,21 +45,22 @@ st.set_page_config(
 
 
 @st.cache_data(ttl=900)
+def _fetch_db_data_cached(
+    ticker: str, start_date_str: str, end_date_str: str
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Caches direct SQLite queries to prevent database lockups under high traffic."""
+    raw_headlines = get_headlines(ticker, start_date_str, end_date_str)
+    raw_summaries = get_daily_summaries(ticker, start_date_str, end_date_str)
+    return raw_headlines, raw_summaries
+
+
 def get_cached_dashboard_data(
     ticker: str, start_date_str: str, end_date_str: str, model: str
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Loads and computes the dashboard summaries and headlines based on the selected model.
 
     Utilizes Streamlit st.cache_data synchronized with the 15-minute scheduler refresh rate.
-
-    Args:
-        ticker: The stock ticker symbol.
-        start_date_str: Start date in format YYYY-MM-DD.
-        end_date_str: End date in format YYYY-MM-DD.
-        model: Sentiment model ('FinBERT' or 'VADER').
-
-    Returns:
-        A tuple of (daily_summaries_df, headlines_df).
+    Handles cold-start caching by bypassing the cache if the database was recently populated.
     """
     logger.info(
         "Loading cached dashboard data for %s from %s to %s via %s",
@@ -69,12 +70,21 @@ def get_cached_dashboard_data(
         model,
     )
 
-    # 1. Fetch data from SQLite
-    raw_headlines = get_headlines(ticker, start_date_str, end_date_str)
-    raw_summaries = get_daily_summaries(ticker, start_date_str, end_date_str)
+    # 1. Fetch data from SQLite (cached)
+    raw_headlines, raw_summaries = _fetch_db_data_cached(ticker, start_date_str, end_date_str)
 
+    # Cold-start handling: If the cache contains empty results (from when the DB
+    # was empty during boot) but the database actually has data now, invalidate
+    # the cache and fetch the fresh records.
     if not raw_headlines or not raw_summaries:
-        return pd.DataFrame(), pd.DataFrame()
+        raw_headlines_uncached = get_headlines(ticker, start_date_str, end_date_str)
+        raw_summaries_uncached = get_daily_summaries(ticker, start_date_str, end_date_str)
+        if raw_headlines_uncached and raw_summaries_uncached:
+            st.cache_data.clear()  # Clear cache to discard the empty values
+            raw_headlines = raw_headlines_uncached
+            raw_summaries = raw_summaries_uncached
+        else:
+            return pd.DataFrame(), pd.DataFrame()
 
     headlines_df = pd.DataFrame(raw_headlines)
     summaries_df = pd.DataFrame(raw_summaries)
