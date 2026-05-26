@@ -6,6 +6,7 @@ recent headline grids, and day-over-day spike alerts.
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Tuple, List, Dict, Any
 
@@ -182,17 +183,35 @@ selected_model = st.sidebar.radio(
     )
 )
 
-# Manual Ingest Button for instant synchronization
+# Check if admin mode is enabled to protect public API key limits
+admin_mode = False
+try:
+    if "ADMIN_MODE" in st.secrets and st.secrets["ADMIN_MODE"] == "true":
+        admin_mode = True
+except Exception:
+    pass
+
+if os.getenv("ADMIN_MODE") == "true":
+    admin_mode = True
+
+# Manual Ingest Button for instant synchronization (Admin Only)
 st.sidebar.markdown("---")
-if st.sidebar.button("🔄 Sync Live Data Now"):
-    with st.sidebar.status("Fetching live news & prices...", expanded=True) as status:
-        try:
-            run_pipeline_for_ticker(ticker, start_date_str, end_date_str)
-            status.update(label="Sync Completed!", state="complete", expanded=False)
-            st.cache_data.clear()  # Clear cache to display newly loaded data
-            st.rerun()
-        except Exception as ex:
-            status.update(label=f"Sync Failed: {ex}", state="error", expanded=True)
+if admin_mode:
+    if st.sidebar.button("🔄 Sync Live Data Now"):
+        with st.sidebar.status("Fetching live news & prices...", expanded=True) as status:
+            try:
+                run_pipeline_for_ticker(ticker, start_date_str, end_date_str)
+                status.update(label="Sync Completed!", state="complete", expanded=False)
+                st.cache_data.clear()  # Clear cache to display newly loaded data
+                st.rerun()
+            except Exception as ex:
+                status.update(label=f"Sync Failed: {ex}", state="error", expanded=True)
+else:
+    st.sidebar.button(
+        "🔄 Sync Live Data Now (Disabled)",
+        disabled=True,
+        help="Manual synchronization is locked on the public dashboard to protect API key limits."
+    )
 
 # ----------------- MAIN PANEL LAYOUT -----------------
 

@@ -135,10 +135,10 @@ def run_pipeline_for_ticker(ticker: str, start_date: str, end_date: str) -> None
 def scheduler_job() -> None:
     """The recurring scheduler callback function.
 
-    Runs every 15 minutes, processing data for the last 2 days to capture
+    Runs every 12 hours, processing data for the last 2 days to capture
     new articles and price updates.
     """
-    logger.info("Starting scheduled 15-minute pipeline updates...")
+    logger.info("Starting scheduled 12-hour pipeline updates...")
     today_str = datetime.now().strftime("%Y-%m-%d")
     yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
@@ -147,7 +147,7 @@ def scheduler_job() -> None:
             run_pipeline_for_ticker(ticker, yesterday_str, today_str)
         except Exception as e:
             logger.error("Error during scheduled sync for ticker %s: %s", ticker, e)
-    logger.info("Scheduled pipeline updates completed.")
+    logger.info("Scheduled 12-hour pipeline updates completed.")
 
 
 def run_backfill_job() -> None:
@@ -183,14 +183,14 @@ def start_scheduler() -> BackgroundScheduler:
     global _scheduler
     if _scheduler is None:
         _scheduler = BackgroundScheduler(daemon=True)
-        # Schedule the job to execute every 15 minutes
+        # Schedule the job to execute every 12 hours
         _scheduler.add_job(
             scheduler_job,
             trigger="interval",
-            minutes=15,
+            hours=12,
             id="sentiment_analyzer_sync",
             replace_existing=True
         )
         _scheduler.start()
-        logger.info("BackgroundScheduler initialized and running every 15 minutes.")
+        logger.info("BackgroundScheduler initialized and running every 12 hours.")
     return _scheduler
